@@ -24,20 +24,22 @@ def get_last_checkpoint(checkpoint_dir):
 
 
 # TODO: Update variables
-max_new_tokens = 64
+max_new_tokens = 200
 top_p = 1
 temperature = 1e-9
-user_question = "What is Einstein's theory of relativity?"
 
 # Base model
-model_name_or_path = 'huggyllama/llama-7b'
+# model_name_or_path = 'huggyllama/llama-7b'
+model_name_or_path = "codellama/CodeLlama-7b-Instruct-hf"
 # Adapter name on HF hub or local checkpoint path.
-adapter_path, _ = get_last_checkpoint('output') # '/output' is not accepted
+# adapter_path, _ = get_last_checkpoint('output') # '/output' is not accepted
+adapter_path = "output/checkpoint-5"
 # adapter_path = 'timdettmers/guanaco-7b'
 
 tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
 # Fixing some of the early LLaMA HF conversion issues.
-tokenizer.bos_token_id = 1
+# tokenizer.bos_token_id = 1
+# tokenizer.pad_token = tokenizer.eos_token
 
 # Load the model (use bf16 for faster inference)
 model = AutoModelForCausalLM.from_pretrained(
@@ -53,27 +55,41 @@ model = AutoModelForCausalLM.from_pretrained(
     )
 )
 
-model = PeftModel.from_pretrained(model, adapter_path)
+# model = PeftModel.from_pretrained(model, adapter_path)
 model.eval()
 
-prompt = (
-    "A chat between a curious human and an artificial intelligence assistant. "
-    "The assistant gives helpful, detailed, and polite answers to the user's questions. \n"
-    "### Human:\n{user_question}\n"
-    "### Assistant:\n"
+
+# user_question = "What is Einstein's theory of relativity?"
+
+# prompt = (
+#     "A chat between a curious human and an artificial intelligence assistant. "
+#     "The assistant gives helpful, detailed, and polite answers to the user's questions. \n"
+#     "### Human:\n{user_question}\n"
+#     "### Assistant:\n"
+# )
+
+user_question = ("Pandas dataframe 'df' is already initialized and pandas is imported as pd.\n"
+          "1. Select 5 maximal values from column 'GDP'.\n"
+          "2. Multiple these values by 2.\n"
+          "3. Print the resulting column."
 )
+
+prompt = "<s>[INST] {user_question} [/INST]"
 
 def generate(model, user_question, max_new_tokens=max_new_tokens, top_p=top_p, temperature=temperature):
     inputs = tokenizer(prompt.format(user_question=user_question), return_tensors="pt").to('cuda')
+    # inputs = tokenizer(user_question[0], return_tensors="pt").to('cuda')
 
     outputs = model.generate(
         **inputs, 
-        generation_config=GenerationConfig(
-            do_sample=True,
-            max_new_tokens=max_new_tokens,
-            top_p=top_p,
-            temperature=temperature,
-        )
+        max_new_tokens=max_new_tokens
+        # **inputs, 
+        # generation_config=GenerationConfig(
+        #     # do_sample=True,
+        #     max_new_tokens=max_new_tokens,
+        #     # top_p=top_p,
+        #     # temperature=temperature,
+        # )
     )
 
     text = tokenizer.decode(outputs[0], skip_special_tokens=True)

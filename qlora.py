@@ -200,7 +200,7 @@ class TrainingArguments(transformers.Seq2SeqTrainingArguments):
     gradient_accumulation_steps: int = field(default=16, metadata={"help": 'How many gradients to accumulate before to perform an optimizer step'})
     max_steps: int = field(default=10000, metadata={"help": 'How many optimizer update steps to take'})
     weight_decay: float = field(default=0.0, metadata={"help": 'The L2 weight decay rate of AdamW'}) # use lora dropout instead for regularization if needed
-    learning_rate: float = field(default=1, metadata={"help": 'The learnign rate'})
+    learning_rate: float = field(default=0.0001, metadata={"help": 'The learnign rate'})
     remove_unused_columns: bool = field(default=False, metadata={"help": 'Removed unused columns. Needed to make this codebase work.'})
     max_grad_norm: float = field(default=0.3, metadata={"help": 'Gradient clipping max norm. This is tuned and works well for all models tested.'})
     gradient_checkpointing: bool = field(default=True, metadata={"help": 'Use gradient checkpointing. You want to use this.'})
@@ -588,6 +588,8 @@ def make_data_module(tokenizer: transformers.PreTrainedTokenizer, args) -> Dict:
             return load_dataset("timdettmers/openassistant-guanaco")
         elif dataset_name == 'vicuna':
             raise NotImplementedError("Vicuna data was not released.")
+        elif dataset_name == 'my-data':
+            return load_dataset("json", data_files="dataset.json", field="data")
         else:
             if os.path.exists(dataset_name):
                 try:
@@ -625,7 +627,6 @@ def make_data_module(tokenizer: transformers.PreTrainedTokenizer, args) -> Dict:
             })
 
         elif args.dataset == 'my-data':
-            dataset = load_dataset("json", data_files="dataset.json", field="data")
             dataset = dataset.map(lambda x: {
                     'input': f"<s>[INST] {x['question'].strip()} [/INST]",
                     'output': x['answer']
