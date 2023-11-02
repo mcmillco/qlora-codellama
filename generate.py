@@ -31,9 +31,10 @@ temperature = 1e-9
 # Base model
 # model_name_or_path = 'huggyllama/llama-7b'
 model_name_or_path = "codellama/CodeLlama-7b-Instruct-hf"
+# model_name_or_path = "HuggingFaceH4/zephyr-7b-alpha"
 # Adapter name on HF hub or local checkpoint path.
-# adapter_path, _ = get_last_checkpoint('output') # '/output' is not accepted
-adapter_path = "output/checkpoint-5"
+adapter_path, _ = get_last_checkpoint('output/codellama-7b-instruct') # '/output' is not accepted
+# adapter_path = "output/checkpoint-270"
 # adapter_path = 'timdettmers/guanaco-7b'
 
 tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
@@ -41,21 +42,24 @@ tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
 # tokenizer.bos_token_id = 1
 # tokenizer.pad_token = tokenizer.eos_token
 
+print("Loaded tokenizer")
+
 # Load the model (use bf16 for faster inference)
 model = AutoModelForCausalLM.from_pretrained(
     model_name_or_path,
     torch_dtype=torch.bfloat16,
     device_map={"": 0},
-    load_in_4bit=True,
+    load_in_4bit=False,
     quantization_config=BitsAndBytesConfig(
         load_in_4bit=True,
         bnb_4bit_compute_dtype=torch.bfloat16,
         bnb_4bit_use_double_quant=True,
         bnb_4bit_quant_type='nf4',
     )
+    , low_cpu_mem_usage=True
 )
 
-# model = PeftModel.from_pretrained(model, adapter_path)
+model = PeftModel.from_pretrained(model, adapter_path)
 model.eval()
 
 
@@ -68,11 +72,14 @@ model.eval()
 #     "### Assistant:\n"
 # )
 
-user_question = ("Pandas dataframe 'df' is already initialized and pandas is imported as pd.\n"
-          "1. Select 5 maximal values from column 'GDP'.\n"
-          "2. Multiple these values by 2.\n"
-          "3. Print the resulting column."
-)
+# user_question = ("Pandas dataframe 'df' is already initialized and pandas is imported as pd.\n"
+#           "1. Select 5 maximal values from column 'GDP'.\n"
+#           "2. Multiple these values by 2.\n"
+#           "3. Print the resulting column."
+# )
+
+# user_question = "BeautifulSoup search string 'Elsie' inside tag 'a'"
+user_question = "Select 5 maximal values from column 'GDP' from a pandas dataframe 'df'"
 
 prompt = "<s>[INST] {user_question} [/INST]"
 
