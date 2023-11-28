@@ -24,7 +24,7 @@ def get_last_checkpoint(checkpoint_dir):
 
 
 # TODO: Update variables
-max_new_tokens = 200
+max_new_tokens = 500
 top_p = 1
 temperature = 1e-9
 
@@ -49,14 +49,14 @@ model = AutoModelForCausalLM.from_pretrained(
     model_name_or_path,
     torch_dtype=torch.bfloat16,
     device_map={"": 0},
-    load_in_4bit=False,
-    quantization_config=BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_compute_dtype=torch.bfloat16,
-        bnb_4bit_use_double_quant=True,
-        bnb_4bit_quant_type='nf4',
-    )
-    , low_cpu_mem_usage=True
+    load_in_8bit=True,
+    # quantization_config=BitsAndBytesConfig(
+    #     load_in_4bit=True,
+    #     bnb_4bit_compute_dtype=torch.bfloat16,
+    #     bnb_4bit_use_double_quant=True,
+    #     bnb_4bit_quant_type='nf4',
+    # ),
+    low_cpu_mem_usage=True
 )
 
 model = PeftModel.from_pretrained(model, adapter_path)
@@ -75,11 +75,72 @@ model.eval()
 # user_question = ("Pandas dataframe 'df' is already initialized and pandas is imported as pd.\n"
 #           "1. Select 5 maximal values from column 'GDP'.\n"
 #           "2. Multiple these values by 2.\n"
-#           "3. Print the resulting column."
-# )
+#           "3. Calculate average."
+#           "4. Print the result."
+# ) # codellama-7B 8bit can solve this
+
+# user_question = """The user provided a query that you need to help achieving: Pie plot of 5 smallest prices. Make legend show car models.. 
+# You also have a list of subtasks to be accomplished using Python.
+
+# You have been presented with a pandas dataframe named `df`.
+# The dataframe df has already been defined and populated with the required data, so don't create a new one.
+# The result of `print(df.head(1))` is:
+#   Car Model  Engine Size  Fuel Efficiency (L/100km)  Horsepower  Torque  \
+# 0   Model_1          1.5                       10.0         228     282   
+
+#    Weight  Top Speed  Acceleration (0-60 mph)  Price  
+# 0    2279        315                     6.79  53900  
+
+# Return only the python code that accomplishes the following tasks:
+# 1. Sort the DataFrame `df` in ascending order based on the 'Price' column.
+# 2. Extract the first 5 rows from the sorted DataFrame.
+# 3. Create a pie plot with the 'Price' column as the data and the 'Car Model' column as the labels.
+# 4. Set the legend to show the car models.
+# 5. Save the pie plot to 'car_specs_Num7.png'.
+
+# Approach each task from the list in isolation, advancing to the next only upon its successful resolution. 
+# Strictly follow to the prescribed instructions to avoid oversights and ensure an accurate solution.
+# You must include the neccessery import statements at the top of the code.
+# You must include print statements to output the final result of your code.
+# You must use the backticks to enclose the code.
+
+# Example of the output format:
+# ```python
+
+# ```
+# """  # codellama-7B 8bit can solve this!
+
+user_question = """The user provided a query that you need to help achieving: Calculate the correlation between price and car model and subtract 0.3. Make legend show car models.. 
+You also have a list of subtasks to be accomplished using Python.
+
+You have been presented with a pandas dataframe named `df`.
+The dataframe df has already been defined and populated with the required data, so don't create a new one.
+The result of `print(df.head(1))` is:
+  Car Model  Engine Size  Fuel Efficiency (L/100km)  Horsepower  Torque  \
+0   Model_1          1.5                       10.0         228     282   
+
+   Weight  Top Speed  Acceleration (0-60 mph)  Price  
+0    2279        315                     6.79  53900  
+
+Return only the python code that accomplishes the following tasks:
+1. Calculate the correlation between 'Price' and 'Car Model' columns.
+2. Subtract 0.3 from the found value.
+5. Print the result.
+
+Approach each task from the list in isolation, advancing to the next only upon its successful resolution. 
+Strictly follow to the prescribed instructions to avoid oversights and ensure an accurate solution.
+You must include the neccessery import statements at the top of the code.
+You must include print statements to output the final result of your code.
+You must use the backticks to enclose the code.
+
+Example of the output format:
+```python
+
+```
+""" # Works even with my 'oneline' PEFT on...
 
 # user_question = "BeautifulSoup search string 'Elsie' inside tag 'a'"
-user_question = "Select 5 maximal values from column 'GDP' from a pandas dataframe 'df'"
+# user_question = "Select 5 maximal values from column 'GDP' from a pandas dataframe 'df'"
 
 prompt = "<s>[INST] {user_question} [/INST]"
 
@@ -89,11 +150,11 @@ def generate(model, user_question, max_new_tokens=max_new_tokens, top_p=top_p, t
 
     outputs = model.generate(
         **inputs, 
-        max_new_tokens=max_new_tokens
+        max_new_tokens=max_new_tokens,
         # **inputs, 
         # generation_config=GenerationConfig(
         #     # do_sample=True,
-        #     max_new_tokens=max_new_tokens,
+            # max_new_tokens=max_new_tokens,
         #     # top_p=top_p,
         #     # temperature=temperature,
         # )
