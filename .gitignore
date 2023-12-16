@@ -1,6 +1,7 @@
 wandb/
 output/
 eval/
+dataset_82_coder_plan/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

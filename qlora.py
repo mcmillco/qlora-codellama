@@ -210,7 +210,7 @@ class TrainingArguments(transformers.Seq2SeqTrainingArguments):
     logging_steps: int = field(default=5, metadata={"help": 'The frequency of update steps after which to log the loss'})
     group_by_length: bool = field(default=True, metadata={"help": 'Group sequences into batches with same length. Saves memory and speeds up training considerably.'})
     save_strategy: str = field(default='steps', metadata={"help": 'When to save checkpoints'})
-    save_steps: int = field(default=10, metadata={"help": 'How often to save a model'})
+    save_steps: int = field(default=90, metadata={"help": 'How often to save a model'})
     save_total_limit: int = field(default=11, metadata={"help": 'How many checkpoints to save before the oldest is overwritten'})
 
 @dataclass
@@ -597,6 +597,8 @@ def make_data_module(tokenizer: transformers.PreTrainedTokenizer, args) -> Dict:
             return load_dataset("json", data_files="dataset.json", field="data")
         elif dataset_name == 'conala':
             return load_dataset("json", data_files="conala-paired-train.json")
+        elif dataset_name == 'dataset_82_coder':
+            return load_dataset("json", data_files="dataset_82_coder.jsonl")
         else:
             if os.path.exists(dataset_name):
                 try:
@@ -644,8 +646,14 @@ def make_data_module(tokenizer: transformers.PreTrainedTokenizer, args) -> Dict:
                     'input': f"<s>[INST] {x['rewritten_intent'].strip()} [/INST]" if x['rewritten_intent'] is not None else x['intent'],
                     'output': x['snippet']
                     })
-            print(dataset)
-            print(dataset["train"])
+            # print(dataset)
+            # print(dataset["train"])
+
+        elif args.dataset == 'dataset_82_coder':
+            dataset = dataset.map(lambda x: {
+                    'input': f"<s>[INST] {x['plan']} [/INST]",
+                    'output': "```python\n" + x['generated_code'] + "```"
+                    })
 
         elif dataset_format == 'input-output':
             # leave as is
@@ -654,6 +662,8 @@ def make_data_module(tokenizer: transformers.PreTrainedTokenizer, args) -> Dict:
         dataset = dataset.remove_columns(
             [col for col in dataset.column_names['train'] if col not in ['input', 'output']]
         )
+        print(dataset)
+        print(dataset["train"])
         return dataset
 
      # Load dataset.

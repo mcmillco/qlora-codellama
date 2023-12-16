@@ -4,6 +4,7 @@ import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, GenerationConfig
 from peft import PeftModel
 from peft.tuners.lora import LoraLayer
+import time
 
 def get_last_checkpoint(checkpoint_dir):
     if isdir(checkpoint_dir):
@@ -33,7 +34,7 @@ temperature = 1e-9
 model_name_or_path = "codellama/CodeLlama-7b-Instruct-hf"
 # model_name_or_path = "HuggingFaceH4/zephyr-7b-alpha"
 # Adapter name on HF hub or local checkpoint path.
-adapter_path, _ = get_last_checkpoint('output/codellama-7b-instruct') # '/output' is not accepted
+adapter_path, _ = get_last_checkpoint('output/dataset_82_coder_plan') # '/output' is not accepted
 # adapter_path = "output/checkpoint-270"
 # adapter_path = 'timdettmers/guanaco-7b'
 
@@ -56,7 +57,7 @@ model = AutoModelForCausalLM.from_pretrained(
     #     bnb_4bit_use_double_quant=True,
     #     bnb_4bit_quant_type='nf4',
     # ),
-    low_cpu_mem_usage=True
+    # low_cpu_mem_usage=True
 )
 
 model = PeftModel.from_pretrained(model, adapter_path)
@@ -110,34 +111,48 @@ model.eval()
 # ```
 # """  # codellama-7B 8bit can solve this!
 
-user_question = """The user provided a query that you need to help achieving: Calculate the correlation between price and car model and subtract 0.3. Make legend show car models.. 
-You also have a list of subtasks to be accomplished using Python.
+# user_question = """The user provided a query that you need to help achieving: Calculate the correlation between price and car model and subtract 0.3. Make legend show car models.. 
+# You also have a list of subtasks to be accomplished using Python.
 
-You have been presented with a pandas dataframe named `df`.
-The dataframe df has already been defined and populated with the required data, so don't create a new one.
-The result of `print(df.head(1))` is:
-  Car Model  Engine Size  Fuel Efficiency (L/100km)  Horsepower  Torque  \
-0   Model_1          1.5                       10.0         228     282   
+# You have been presented with a pandas dataframe named `df`.
+# The dataframe df has already been defined and populated with the required data, so don't create a new one.
+# The result of `print(df.head(1))` is:
+#   Car Model  Engine Size  Fuel Efficiency (L/100km)  Horsepower  Torque  \
+# 0   Model_1          1.5                       10.0         228     282   
 
-   Weight  Top Speed  Acceleration (0-60 mph)  Price  
-0    2279        315                     6.79  53900  
+#    Weight  Top Speed  Acceleration (0-60 mph)  Price  
+# 0    2279        315                     6.79  53900  
 
-Return only the python code that accomplishes the following tasks:
-1. Calculate the correlation between 'Price' and 'Car Model' columns.
-2. Subtract 0.3 from the found value.
-5. Print the result.
+# Return only the python code that accomplishes the following tasks:
+# 1. Calculate the correlation between 'Price' and 'Car Model' columns.
+# 2. Subtract 0.3 from the found value.
+# 3. Print the result.
 
-Approach each task from the list in isolation, advancing to the next only upon its successful resolution. 
-Strictly follow to the prescribed instructions to avoid oversights and ensure an accurate solution.
-You must include the neccessery import statements at the top of the code.
-You must include print statements to output the final result of your code.
-You must use the backticks to enclose the code.
+# Approach each task from the list in isolation, advancing to the next only upon its successful resolution. 
+# Strictly follow to the prescribed instructions to avoid oversights and ensure an accurate solution.
+# You must include the neccessery import statements at the top of the code.
+# You must include print statements to output the final result of your code.
+# You must use the backticks to enclose the code.
 
-Example of the output format:
-```python
+# Example of the output format:
+# ```python
 
-```
-""" # Works even with my 'oneline' PEFT on...
+# ```
+# """ # Works even with my 'oneline' PEFT on...
+
+user_question = """
+1. Sort the DataFrame `df` in ascending order based on the 'Price' column.
+2. Extract the first 5 rows from the sorted DataFrame.
+3. Create a pie plot with the 'Price' column as the data and the 'Car Model' column as the labels.
+4. Set the legend to show the car models.
+5. Save the pie plot to 'car_specs_Num7.png'.
+"""
+
+
+# First instance from dataset_82_coder_plan
+# user_question = "1. Sort the DataFrame 'df' by the 'Price' column in descending order.\n2. Select the first 5 rows from the sorted DataFrame, which will contain the 5 biggest prices.\n3. Print the selected rows."
+# code = "import pandas as pd\n\n# Sort the DataFrame 'df' by the 'Price' column in descending order\ndf_sorted = df.sort_values('Price', ascending=False)\n\n# Select the first 5 rows from the sorted DataFrame\ntop_5_prices = df_sorted.head(5)\n\n# Print the selected rows\nprint(top_5_prices)"
+# print(code)
 
 # user_question = "BeautifulSoup search string 'Elsie' inside tag 'a'"
 # user_question = "Select 5 maximal values from column 'GDP' from a pandas dataframe 'df'"
@@ -164,5 +179,9 @@ def generate(model, user_question, max_new_tokens=max_new_tokens, top_p=top_p, t
     print(text)
     return text
 
+start = time.time()
+
 generate(model, user_question)
+
+print(f"\033[91m Time: {time.time() - start}. \033[0m")
 # import pdb; pdb.set_trace()
