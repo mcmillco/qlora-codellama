@@ -5,6 +5,8 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from peft import PeftModel
 from peft.tuners.lora import LoraLayer
 import time
+import json
+import tqdm
 
 def get_last_checkpoint(checkpoint_dir):
     if isdir(checkpoint_dir):
@@ -28,17 +30,30 @@ def get_last_checkpoint(checkpoint_dir):
 max_new_tokens = 500
 top_p = 1
 temperature = 1e-9
-
+f = open('data/codegen_test.json')
+pf = open(f'predictions/codegen_base_codellama.txt', 'w')
+testdata = json.load(f)
 # Base model
-# model_name_or_path = 'huggyllama/llama-7b'
-model_name_or_path = "codellama/CodeLlama-7b-Instruct-hf"
-# model_name_or_path = "HuggingFaceH4/zephyr-7b-alpha"
+# model_name_or_path = 'huggyllama/llama-7b'model_name_or_path = "codellama/CodeLlama-7b-Instruct-hf"
+model_name_or_path = "codellama/CodeLlama-13b-Instruct-hf"
 # Adapter name on HF hub or local checkpoint path.
-adapter_path, _ = get_last_checkpoint('output/dataset_82_coder_plan') # '/output' is not accepted
+
+#adapter_path, _ = get_last_checkpoint('output/checkpoint-720') # '/output' is not accepted
+adapter_path = 'codegen_base/checkpoint-1875' # '/output' is not accepted
+
 # adapter_path = "output/checkpoint-270"
 # adapter_path = 'timdettmers/guanaco-7b'
 
-tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
+tokenizer = AutoTokenizer.from_pretrained(model_name_or_path, device_map='auto')
+prompt = "<s>[INST] {user_question}[\INST]"
+
+inputs = tokenizer(prompt.format(user_question=testdata[72]), return_tensors="pt").to('cuda')
+    # inputs = tokenizer(user_question[0], return_tensors="pt").to('cuda')
+if(inputs['input_ids'].shape[1] > 1024):
+    inputs['input_ids'] = inputs['input_ids'][:,-1024:]
+
+    inputs['attention_mask'] = inputs['attention_mask'][:,-1024:]
+print(inputs['input_ids'].shape)
 # Fixing some of the early LLaMA HF conversion issues.
 # tokenizer.bos_token_id = 1
 # tokenizer.pad_token = tokenizer.eos_token
@@ -49,8 +64,9 @@ print("Loaded tokenizer")
 model = AutoModelForCausalLM.from_pretrained(
     model_name_or_path,
     torch_dtype=torch.bfloat16,
-    device_map={"": 0},
+    #device_map={"": 0},
     load_in_8bit=True,
+    device_map = 'auto',
     # quantization_config=BitsAndBytesConfig(
     #     load_in_4bit=True,
     #     bnb_4bit_compute_dtype=torch.bfloat16,
@@ -59,8 +75,9 @@ model = AutoModelForCausalLM.from_pretrained(
     # ),
     # low_cpu_mem_usage=True
 )
-
-model = PeftModel.from_pretrained(model, adapter_path)
+#print("----", model)
+#model.resize_token_embeddings(len(tokenizer)-1)
+#model = PeftModel.from_pretrained(model, adapter_path)
 model.eval()
 
 
@@ -157,12 +174,14 @@ user_question = """
 # user_question = "BeautifulSoup search string 'Elsie' inside tag 'a'"
 # user_question = "Select 5 maximal values from column 'GDP' from a pandas dataframe 'df'"
 
-prompt = "<s>[INST] {user_question} [/INST]"
+prompt = "<s>[INST] {user_question}[\INST]"
 
 def generate(model, user_question, max_new_tokens=max_new_tokens, top_p=top_p, temperature=temperature):
     inputs = tokenizer(prompt.format(user_question=user_question), return_tensors="pt").to('cuda')
     # inputs = tokenizer(user_question[0], return_tensors="pt").to('cuda')
-
+    if(inputs['input_ids'].shape[1] > 1024):
+        inputs['input_ids'] = inputs['input_ids'][:, -1024:]
+        inputs['attention_mask'] = inputs['attention_mask'][:, -1024:]
     outputs = model.generate(
         **inputs, 
         max_new_tokens=max_new_tokens,
@@ -176,12 +195,19 @@ def generate(model, user_question, max_new_tokens=max_new_tokens, top_p=top_p, t
     )
 
     text = tokenizer.decode(outputs[0], skip_special_tokens=True)
-    print(text)
     return text
 
 start = time.time()
-
-generate(model, user_question)
+for data in tqdm.tqdm(testdata[:3]):
+    fid = data['fid']
+    ret = generate(model, data['input'])
+    print(ret)
+    ret = ret.split("[\INST]")[-1]
+    ret = ret.split("\n")[0]
+    s = f'{fid}\t<s>\t{ret}\n'
+    pf.write(s)
+    pf.flush()
+pf.close() 
 
 print(f"\033[91m Time: {time.time() - start}. \033[0m")
 # import pdb; pdb.set_trace()
