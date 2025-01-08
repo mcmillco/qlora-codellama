@@ -6,16 +6,16 @@ from tqdm import tqdm
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='')
-    parser.add_argument('--train-filename', type=str, default='/nfs/projects/llm_reason/codegen/concode/train.json')
-    parser.add_argument('--val-filename', type=str, default='/nfs/projects/llm_reason/codegen/concode/dev.json')
-    parser.add_argument('--test-filename', type=str, default='/nfs/projects/llm_reason/codegen/concode/dev.json')
+    parser.add_argument('--train-filename', type=str, default='./data/code-code/train.json')
+    parser.add_argument('--val-filename', type=str, default='./data/code-code/dev.json')
+    parser.add_argument('--test-filename', type=str, default='./data/code-code/dev.json')
 
-    parser.add_argument('--valjava-file', type=str, default='/nfs/projects/llm_reason/code-code/valid.java-cs.txt.java')
-    parser.add_argument('--valcs-file', type=str, default='/nfs/projects/llm_reason/code-code/valid.java-cs.txt.cs')
-    parser.add_argument('--trainjava-file', type=str, default='/nfs/projects/llm_reason/code-code/train.java-cs.txt.java')
-    parser.add_argument('--traincs-file', type=str, default='/nfs/projects/llm_reason/code-code/train.java-cs.txt.cs')
-    parser.add_argument('--test-java-file', type=str, default='/nfs/projects/llm_reason/code-code/test.java-cs.txt.java')
-    parser.add_argument('--test-cs-file', type=str, default='/nfs/projects/llm_reason/code-code/test.java-cs.txt.cs')
+    parser.add_argument('--valjava-file', type=str, default='./data/code-code/valid.java-cs.txt.java')
+    parser.add_argument('--valcs-file', type=str, default='./data/code-code/valid.java-cs.txt.cs')
+    parser.add_argument('--trainjava-file', type=str, default='./data/code-code/train.java-cs.txt.java')
+    parser.add_argument('--traincs-file', type=str, default='./data/code-code/train.java-cs.txt.cs')
+    parser.add_argument('--test-java-file', type=str, default='./data/code-code/test.java-cs.txt.java')
+    parser.add_argument('--test-cs-file', type=str, default='./data/code-code/test.java-cs.txt.cs')
 
     args = parser.parse_args()
     valjava_file = args.valjava_file
