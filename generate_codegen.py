@@ -198,17 +198,11 @@ def generate(model, user_question, max_new_tokens=max_new_tokens, top_p=top_p, t
     return text
 
 start = time.time()
-for data in tqdm.tqdm(testdata[:3]):
+for data in tqdm.tqdm(testdata[:]):
     fid = data['fid']
     ret = generate(model, data['input'])
     ret = ret.split("[\INST]")[-1]
-    try:
-        ret = ret.split("```")[1]
-    except:
-       pass
-    ret = ret.replace("\n", " ")
-    print(ret)
-    s = f'{fid}\t<s>\t{ret}\n'
+    s = f'{fid}\t{ret}\n'
     pf.write(s)
     pf.flush()
 pf.close() 
